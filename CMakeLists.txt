@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.17 FATAL_ERROR)
+set( CUDA_TOOLKIT_ROOT_DIR "/usr/local/cuda-8.0" )
 
-
-message("include cuda: ${CUDA_TOOLKIT_ROOT_DIR}")
 include_directories(${CUDA_TOOLKIT_ROOT_DIR}/include)
 project(cuda_matmul LANGUAGES CXX CUDA)
 enable_language(CUDA)
@@ -9,6 +8,7 @@ SET(CMAKE_CXX_FLAGS "-std=c++11 -O3")
 add_library(funcs STATIC funcs.h)
 set_target_properties( funcs PROPERTIES LINKER_LANGUAGE CXX)
 add_library(funcs_cuda STATIC funcs_cuda.cuh funcs_cuda.cu)
+target_link_libraries(funcs_cuda -lcublas)
 set_target_properties( funcs_cuda PROPERTIES LINKER_LANGUAGE CUDA)
 set_target_properties(funcs_cuda PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 

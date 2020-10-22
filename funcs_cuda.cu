@@ -73,25 +73,51 @@ void VectorsClass::VectorAdd_GPU_InClass(double *h_c, const int n) {
 }
 
 void MatricesClass::initialize_A_B(const double *h_A, const double *h_B, const int m, const int n, const int k) {
-    cudaMemcpy( this->d_A, h_A, m*n*sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy( this->d_B, h_B, n*k*sizeof(double), cudaMemcpyHostToDevice);
+    checkCudaErrors(cudaMemcpy( this->d_A, h_A, m*n*sizeof(double), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy( this->d_B, h_B, n*k*sizeof(double), cudaMemcpyHostToDevice));
 
 }
 
 void MatricesClass::matmul_GPU() {
-    cublasCreate(&this->handle);
+    checkCudaErrors(cublasCreate(&this->handle));
     // Calculate: c = (alpha*a) * b + (beta*c)
     // MxN = MxK * KxN
     // Signature: handle, operation, operation, M, N, K, alpha, A, lda, B, ldb,
     // beta, C, ldc
-    double alpha {0.0};
+    double alpha {1.0};
     double beta {0.0};
-    cublasDgemm(this->handle, CUBLAS_OP_N, CUBLAS_OP_N, this->m, this->k, this->n, &alpha, this->d_A, this->m, this->d_B, this->n,
-                &beta, this->d_C, this->m);
+    checkCudaErrors(cublasDgemm(this->handle, CUBLAS_OP_N, CUBLAS_OP_N, this->m, this->k, this->n, &alpha, this->d_A, this->m, this->d_B, this->n,
+                    &beta, this->d_C, this->m));
+    cudaThreadSynchronize();
 }
 void MatricesClass::retrieve_C(double *h_C) {
 //    std::cout << "inside retrive_C" << std::endl;
-    cudaMemcpy( h_C, this->d_C, this->bytes_C, cudaMemcpyDeviceToHost );
+    checkCudaErrors(cudaMemcpy( h_C, this->d_C, this->bytes_C, cudaMemcpyDeviceToHost ));
+//    for (int i {0}; i < m*k; ++i) {
+//        std::cout << h_C[i] << std::endl;
+//    }
+}
+void MatricesClassEigen::initialize_A_B(const Eigen::MatrixXd &A, const Eigen::MatrixXd &B) {
+    checkCudaErrors(cudaMemcpy( this->d_A, A.data(), A.rows()*A.cols()*sizeof(double), cudaMemcpyHostToDevice));
+    checkCudaErrors(cudaMemcpy( this->d_B, B.data(), B.rows()*B.cols()*sizeof(double), cudaMemcpyHostToDevice));
+
+}
+
+void MatricesClassEigen::matmul_GPU() {
+    checkCudaErrors(cublasCreate(&this->handle));
+    // Calculate: c = (alpha*a) * b + (beta*c)
+    // MxN = MxK * KxN
+    // Signature: handle, operation, operation, M, N, K, alpha, A, lda, B, ldb,
+    // beta, C, ldc
+    double alpha {1.0};
+    double beta {0.0};
+    checkCudaErrors(cublasDgemm(this->handle, CUBLAS_OP_N, CUBLAS_OP_N, this->m, this->k, this->n, &alpha, this->d_A, this->m, this->d_B, this->n,
+                                &beta, this->d_C, this->m));
+    cudaThreadSynchronize();
+}
+void MatricesClassEigen::retrieve_C(Eigen::MatrixXd &C) {
+//    std::cout << "inside retrive_C" << std::endl;
+    checkCudaErrors(cudaMemcpy( C.data(), this->d_C, this->bytes_C, cudaMemcpyDeviceToHost ));
 //    for (int i {0}; i < m*k; ++i) {
 //        std::cout << h_C[i] << std::endl;
 //    }

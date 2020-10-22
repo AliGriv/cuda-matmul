@@ -10,6 +10,11 @@
 #include "cuda_runtime_api.h"
 #include <cmath>
 #include "cublas_v2.h"
+// CUDA and CUBLAS functions
+#include <helper_functions.h>
+#include <helper_cuda.h>
+#include <helper_string.h>
+#include <eigen3/Eigen/Dense>
 __global__ void VectorAdd_Kernel(const double *a, const double *b, double *c, const int n);
 void VectorAdd_GPU(const double *h_a, const double *h_b, double *h_c, const int n);
 
@@ -76,5 +81,37 @@ public:
     }
 };
 
+class MatricesClassEigen {
+private:
+    double *d_A; /*m-by-n*/
+    double *d_B; /*n-by-k*/
+    double *d_C; /*m-by-k*/
+    size_t bytes_A;
+    size_t bytes_B;
+    size_t bytes_C;
+    int m;
+    int n;
+    int k;
+    cublasHandle_t handle;
+public:
+    MatricesClassEigen(const Eigen::MatrixXd &A, const Eigen::MatrixXd &B):
+            bytes_A(A.rows()*A.cols()*sizeof(double)),
+            bytes_B(B.rows()*B.cols()*sizeof(double)),
+            bytes_C(A.rows()*B.cols()*sizeof(double)),
+            m(A.rows()), n(B.rows()), k(B.cols()){
+        cudaMalloc(&d_A, bytes_A);
+        cudaMalloc(&d_B, bytes_B);
+        cudaMalloc(&d_C, bytes_C);
+    }
+    void initialize_A_B(const Eigen::MatrixXd &A, const Eigen::MatrixXd &B);
+    void matmul_GPU();
+    void retrieve_C(Eigen::MatrixXd &C);
+    ~MatricesClassEigen() {
+        cudaFree(d_A);
+        cudaFree(d_B);
+        cudaFree(d_C);
+        cublasDestroy(handle);
+    }
+};
 
 #endif
